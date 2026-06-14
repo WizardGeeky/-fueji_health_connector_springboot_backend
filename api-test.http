@@ -1,0 +1,435 @@
+### ============================================================
+### HealthConnector Prior Authorization Platform — API Tests
+### Use with IntelliJ HTTP Client or VS Code REST Client plugin
+### ============================================================
+### Base URL
+@baseUrl = http://localhost:8080
+
+### After login, copy the accessToken below:
+@adminToken = PASTE_ADMIN_TOKEN_HERE
+@providerToken = PASTE_PROVIDER_TOKEN_HERE
+@payerToken = PASTE_PAYER_TOKEN_HERE
+
+### After creating, paste IDs here:
+@providerId = PASTE_PROVIDER_ID_HERE
+@payerId = PASTE_PAYER_ID_HERE
+@authorizationId = PASTE_AUTHORIZATION_ID_HERE
+@notificationId = PASTE_NOTIFICATION_ID_HERE
+
+### ============================================================
+### 1. AUTHENTICATION
+### ============================================================
+
+### 1.1 Login as Super Admin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@healthconnector.com",
+  "password": "Admin@1234"
+}
+
+---
+
+### 1.2 Login as Provider (after creating one)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "provider@hospital.com",
+  "password": "PASTE_TEMP_PASSWORD_FROM_EMAIL"
+}
+
+---
+
+### 1.3 Login as Payer (after creating one)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "payer@insurance.com",
+  "password": "PASTE_TEMP_PASSWORD_FROM_EMAIL"
+}
+
+---
+
+### 1.4 Refresh Token
+POST {{baseUrl}}/api/auth/refresh
+Content-Type: application/json
+Refresh-Token: PASTE_REFRESH_TOKEN_HERE
+
+---
+
+### 1.5 Change Password (authenticated user)
+POST {{baseUrl}}/api/auth/change-password
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "currentPassword": "Admin@1234",
+  "newPassword": "NewAdmin@5678",
+  "confirmPassword": "NewAdmin@5678"
+}
+
+---
+
+### 1.6 Logout
+POST {{baseUrl}}/api/auth/logout
+Authorization: Bearer {{adminToken}}
+
+---
+
+### ============================================================
+### 2. PROVIDER MANAGEMENT (SUPER_ADMIN only)
+### ============================================================
+
+### 2.1 Create Provider
+POST {{baseUrl}}/api/providers
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "firstName": "Dr. John",
+  "lastName": "Smith",
+  "email": "provider@hospital.com",
+  "mobile": "+14155552671",
+  "organizationName": "City General Hospital",
+  "npi": "1234567893",
+  "address": "100 Medical Drive, San Francisco, CA 94102"
+}
+
+---
+
+### 2.2 List All Providers
+GET {{baseUrl}}/api/providers?page=0&size=10
+Authorization: Bearer {{adminToken}}
+
+---
+
+### 2.3 Get Provider by ID
+GET {{baseUrl}}/api/providers/{{providerId}}
+Authorization: Bearer {{adminToken}}
+
+---
+
+### 2.4 Block Provider
+PATCH {{baseUrl}}/api/providers/{{providerId}}/block
+Authorization: Bearer {{adminToken}}
+
+---
+
+### 2.5 Activate Provider
+PATCH {{baseUrl}}/api/providers/{{providerId}}/activate
+Authorization: Bearer {{adminToken}}
+
+---
+
+### 2.6 Reset Provider Password
+POST {{baseUrl}}/api/providers/{{providerId}}/reset-password
+Authorization: Bearer {{adminToken}}
+
+---
+
+### 2.7 Delete Provider (soft delete)
+DELETE {{baseUrl}}/api/providers/{{providerId}}
+Authorization: Bearer {{adminToken}}
+
+---
+
+### ============================================================
+### 3. PAYER MANAGEMENT (SUPER_ADMIN only)
+### ============================================================
+
+### 3.1 Create Payer
+POST {{baseUrl}}/api/payers
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "firstName": "Alice",
+  "lastName": "Johnson",
+  "email": "payer@insurance.com",
+  "mobile": "+14155559001",
+  "organizationName": "BlueCross Insurance Co.",
+  "address": "200 Insurance Ave, Chicago, IL 60601"
+}
+
+---
+
+### 3.2 List All Payers (Admin or Provider)
+GET {{baseUrl}}/api/payers?page=0&size=10
+Authorization: Bearer {{adminToken}}
+
+---
+
+### 3.3 Get Payer by ID
+GET {{baseUrl}}/api/payers/{{payerId}}
+Authorization: Bearer {{adminToken}}
+
+---
+
+### 3.4 Block Payer
+PATCH {{baseUrl}}/api/payers/{{payerId}}/block
+Authorization: Bearer {{adminToken}}
+
+---
+
+### 3.5 Activate Payer
+PATCH {{baseUrl}}/api/payers/{{payerId}}/activate
+Authorization: Bearer {{adminToken}}
+
+---
+
+### 3.6 Reset Payer Password
+POST {{baseUrl}}/api/payers/{{payerId}}/reset-password
+Authorization: Bearer {{adminToken}}
+
+---
+
+### ============================================================
+### 4. PRIOR AUTHORIZATION — PROVIDER FLOW
+### ============================================================
+
+### 4.1 Create Authorization Draft (PROVIDER)
+POST {{baseUrl}}/api/authorizations
+Content-Type: application/json
+Authorization: Bearer {{providerToken}}
+
+{
+  "payerId": "{{payerId}}",
+  "patientName": "Jane Doe",
+  "patientDateOfBirth": "1985-06-15",
+  "patientAddress": "456 Oak Street, Austin, TX 78701",
+  "patientMobile": "+15125559234",
+  "insuranceNumber": "INS-2026-78901",
+  "memberId": "MEM-2026-12345",
+  "primaryDiagnosisCode": "J18.9",
+  "diagnosisDescription": "Pneumonia, unspecified organism",
+  "procedureCode": "99213",
+  "procedureDescription": "Office visit, established patient, moderate complexity",
+  "clinicalNotes": "Patient presents with 5-day fever, productive cough, and dyspnea. Chest X-ray confirms bilateral infiltrates. IV antibiotics recommended.",
+  "requestedServiceDate": "2026-07-01",
+  "priority": "URGENT",
+  "placeOfService": "INPATIENT"
+}
+
+---
+
+### 4.2 Get My Authorizations (PROVIDER)
+GET {{baseUrl}}/api/authorizations/my?page=0&size=10
+Authorization: Bearer {{providerToken}}
+
+---
+
+### 4.3 Get Authorization by ID
+GET {{baseUrl}}/api/authorizations/{{authorizationId}}
+Authorization: Bearer {{providerToken}}
+
+---
+
+### 4.4 Trigger AI Review (PROVIDER)
+POST {{baseUrl}}/api/authorizations/{{authorizationId}}/ai-review
+Authorization: Bearer {{providerToken}}
+
+---
+
+### 4.5 Submit Authorization to Payer (PROVIDER)
+POST {{baseUrl}}/api/authorizations/{{authorizationId}}/submit
+Authorization: Bearer {{providerToken}}
+
+---
+
+### 4.6 Delete Draft Authorization (PROVIDER)
+DELETE {{baseUrl}}/api/authorizations/{{authorizationId}}
+Authorization: Bearer {{providerToken}}
+
+---
+
+### ============================================================
+### 5. PRIOR AUTHORIZATION — PAYER REVIEW FLOW
+### ============================================================
+
+### 5.1 Get Payer Queue (PAYER)
+GET {{baseUrl}}/api/authorizations/queue?page=0&size=10
+Authorization: Bearer {{payerToken}}
+
+---
+
+### 5.2 Approve Authorization (PAYER)
+POST {{baseUrl}}/api/authorizations/{{authorizationId}}/approve?notes=Medically+necessary,+approved+for+7+days
+Authorization: Bearer {{payerToken}}
+
+---
+
+### 5.3 Reject Authorization (PAYER)
+POST {{baseUrl}}/api/authorizations/{{authorizationId}}/reject?reason=Diagnosis+does+not+meet+criteria+for+inpatient+admission
+Authorization: Bearer {{payerToken}}
+
+---
+
+### 5.4 Request More Info (PAYER)
+POST {{baseUrl}}/api/authorizations/{{authorizationId}}/request-info?notes=Please+provide+prior+treatment+history+and+lab+results
+Authorization: Bearer {{payerToken}}
+
+---
+
+### ============================================================
+### 6. ADMIN — ALL AUTHORIZATIONS
+### ============================================================
+
+### 6.1 Get All Authorizations (SUPER_ADMIN)
+GET {{baseUrl}}/api/authorizations?page=0&size=20
+Authorization: Bearer {{adminToken}}
+
+---
+
+### ============================================================
+### 7. CHAT — PROVIDER ↔ PAYER MESSAGING
+### ============================================================
+
+### 7.1 Send Message (PROVIDER to PAYER)
+POST {{baseUrl}}/api/chat/authorizations/{{authorizationId}}/messages
+Content-Type: application/json
+Authorization: Bearer {{providerToken}}
+
+{
+  "content": "Hi, I have attached additional lab results supporting the inpatient admission. Please review at your earliest convenience."
+}
+
+---
+
+### 7.2 Send Message (PAYER to PROVIDER)
+POST {{baseUrl}}/api/chat/authorizations/{{authorizationId}}/messages
+Content-Type: application/json
+Authorization: Bearer {{payerToken}}
+
+{
+  "content": "Thank you. We have received the lab results and will complete our review within 24 hours."
+}
+
+---
+
+### 7.3 Get Messages for Authorization
+GET {{baseUrl}}/api/chat/authorizations/{{authorizationId}}/messages?page=0&size=50
+Authorization: Bearer {{providerToken}}
+
+---
+
+### ============================================================
+### 8. NOTIFICATIONS
+### ============================================================
+
+### 8.1 Get My Notifications
+GET {{baseUrl}}/api/notifications?page=0&size=20
+Authorization: Bearer {{providerToken}}
+
+---
+
+### 8.2 Get Unread Notification Count
+GET {{baseUrl}}/api/notifications/unread-count
+Authorization: Bearer {{providerToken}}
+
+---
+
+### 8.3 Mark Notification as Read
+PATCH {{baseUrl}}/api/notifications/{{notificationId}}/read
+Authorization: Bearer {{providerToken}}
+
+---
+
+### 8.4 Mark All Notifications as Read
+PATCH {{baseUrl}}/api/notifications/read-all
+Authorization: Bearer {{providerToken}}
+
+---
+
+### ============================================================
+### 9. AUDIT LOGS (SUPER_ADMIN only)
+### ============================================================
+
+### 9.1 Get All Audit Logs
+GET {{baseUrl}}/api/audit-logs?page=0&size=20
+Authorization: Bearer {{adminToken}}
+
+---
+
+### 9.2 Get Audit Logs for a User
+GET {{baseUrl}}/api/audit-logs/user/{{providerId}}
+Authorization: Bearer {{adminToken}}
+
+---
+
+### 9.3 Get Audit Logs for an Entity
+GET {{baseUrl}}/api/audit-logs/entity/AUTHORIZATION/{{authorizationId}}
+Authorization: Bearer {{adminToken}}
+
+---
+
+### ============================================================
+### 10. ANALYTICS / DASHBOARDS
+### ============================================================
+
+### 10.1 Admin Dashboard (SUPER_ADMIN)
+GET {{baseUrl}}/api/analytics/admin/dashboard
+Authorization: Bearer {{adminToken}}
+
+---
+
+### 10.2 Provider Dashboard (PROVIDER)
+GET {{baseUrl}}/api/analytics/provider/dashboard
+Authorization: Bearer {{providerToken}}
+
+---
+
+### 10.3 Payer Dashboard (PAYER)
+GET {{baseUrl}}/api/analytics/payer/dashboard
+Authorization: Bearer {{payerToken}}
+
+---
+
+### ============================================================
+### 11. SYSTEM CONFIGURATION (SUPER_ADMIN only)
+### ============================================================
+
+### 11.1 Get System Config
+GET {{baseUrl}}/api/system/config
+Authorization: Bearer {{adminToken}}
+
+---
+
+### 11.2 Update System Config
+PUT {{baseUrl}}/api/system/config
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "geminiModel": "gemini-2.5-flash-lite",
+  "geminiTemperature": 0.3,
+  "geminiMaxTokens": 4096,
+  "geminiEnabled": true,
+  "aiReviewRequiredBeforeSubmit": false,
+  "fhirEnabled": true,
+  "maxFailedAttempts": 5,
+  "passwordExpiryDays": 90
+}
+
+---
+
+### ============================================================
+### 12. HEALTH CHECK & SWAGGER
+### ============================================================
+
+### 12.1 Health Check
+GET {{baseUrl}}/actuator/health
+
+---
+
+### 12.2 Swagger UI
+GET {{baseUrl}}/swagger-ui.html
+
+---
+
+### 12.3 API Docs (JSON)
+GET {{baseUrl}}/api-docs
+
+---
